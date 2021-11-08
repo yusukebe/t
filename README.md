@@ -10,7 +10,7 @@ $ go get github.com/yusukebe/t/cmd/t
 
 ## Usage
 
-Basic ussage:
+Basic usage:
 
 ```
 $ t hello hello # => PASS
@@ -30,6 +30,16 @@ With [jq](https://stedolan.github.io/jq/):
 
 ```
 $ echo '{ "message": "hello" }' | jq -r .message | t hello # => PASS
+```
+
+With operator
+
+```
+$ t -o ">" 10 "3*2" # => PASS
+```
+
+```
+$ echo '{ "number": 5 }' | jq -r .number | t 10 -o '>'
 ```
 
 ## Author

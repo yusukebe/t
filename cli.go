@@ -2,51 +2,99 @@ package t
 
 import (
 	"fmt"
+	"go/constant"
 	"io/ioutil"
 	"os"
 	"strings"
 
+	"go/token"
+	"go/types"
+
 	"github.com/fatih/color"
+	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-type CLI struct{}
+type param struct {
+	operator string
+}
 
-func (cli *CLI) Run() {
-	actual := ""
-	expected := ""
+var rootCmd = &cobra.Command{
+	Use:   "t [expected] [actual]",
+	Short: "t is a command line tool for testing on your terminal",
+	Run: func(cmd *cobra.Command, args []string) {
 
-	if len(os.Args) <= 1 {
-		cli.showUsage()
-		os.Exit(0)
+		actual := ""
+		expected := ""
+
+		if len(args) > 0 {
+			expected = args[0]
+		}
+
+		if len(args) >= 1 {
+			if !terminal.IsTerminal(int(os.Stdin.Fd())) {
+				stdin, _ := ioutil.ReadAll(os.Stdin)
+				actual = strings.TrimSpace(string(stdin))
+			} else {
+				actual = args[1]
+			}
+		}
+		param := param{
+			operator: "",
+		}
+		param.operator, _ = cmd.Flags().GetString("operator")
+		test(expected, actual, param)
+	},
+}
+
+func init() {
+	rootCmd.Flags().StringP("operator", "o", "", "Operator")
+}
+
+func Execute() {
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
+}
 
-	if len(os.Args) > 1 {
-		expected = os.Args[1]
-	}
-
-	if len(os.Args) >= 2 {
-		if !terminal.IsTerminal(int(os.Stdin.Fd())) {
-			stdin, _ := ioutil.ReadAll(os.Stdin)
-			actual = strings.TrimSpace(string(stdin))
+func test(expected string, actual string, param param) {
+	if param.operator == "" {
+		if expected == actual {
+			pass(fmt.Sprintf("%s == %s", expected, actual))
 		} else {
-			actual = os.Args[2]
+			fail(fmt.Sprintf("%s != %s", expected, actual))
 		}
 	}
 
-	cli.test(expected, actual)
-}
+	expr := fmt.Sprintf("%s %s %s", expected, param.operator, actual)
+	v := eval(expr)
 
-func (cli *CLI) test(expected string, actual string) {
-	if expected == actual {
-		check := "\u2713"
-		color.Green("%s PASS: got %v, want %v\n", check, actual, expected)
+	if v.String() == "true" {
+		pass(expr)
 	} else {
-		ballot := "\u2717"
-		color.Red("%s FAIL: got %v, want %v\n", ballot, actual, expected)
+		fail(expr)
 	}
 }
 
-func (cli *CLI) showUsage() {
-	fmt.Println("Usage: t hello hell")
+func pass(message string) {
+	check := "\u2713"
+	color.Green("%s PASS: %s\n", check, message)
+	os.Exit(0)
+}
+
+func fail(message string) {
+	ballot := "\u2717"
+	color.Red("%s FAIL: %v\n", ballot, message)
+	os.Exit(0)
+}
+
+func eval(expr string) constant.Value {
+	fset := token.NewFileSet()
+	tv, err := types.Eval(fset, nil, token.NoPos, expr)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	return tv.Value
 }
