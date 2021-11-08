@@ -2,6 +2,8 @@
 
 `t` is a command line tool for testing on your terminal.
 
+![Terminal](https://user-images.githubusercontent.com/10682/140739013-ed862433-72a6-4e36-b253-aba36052b8f6.png)
+
 ## Installation
 
 ```
@@ -39,7 +41,13 @@ $ t -o ">" 10 "3*2" # => PASS
 ```
 
 ```
-$ echo '{ "number": 5 }' | jq -r .number | t 10 -o '>'
+$ echo '{ "number": 5 }' | jq -r .number | t 10 -o '>' # => PASS
+```
+
+With [rj](https://github.com/yusukebe/rj), test status is OK:
+
+```
+$ rj http://example.com/ | jq -r .code | t 200 -o '<='
 ```
 
 ## Author
