@@ -87,7 +87,7 @@ func pass(message string) {
 func fail(message string) {
 	ballot := "\u2717"
 	color.Red("%s FAIL: %v\n", ballot, message)
-	os.Exit(0)
+	os.Exit(1)
 }
 
 func eval(expr string) constant.Value {
