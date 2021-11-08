@@ -2,9 +2,9 @@ package t
 
 import (
 	"fmt"
-	"go/constant"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 
 	"go/token"
@@ -16,16 +16,18 @@ import (
 )
 
 type param struct {
-	operator string
-	evalFlag bool
+	operator     string
+	evalFlag     bool
+	matchFlag    bool
+	notMatchFlag bool
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "t [expected] [actual]",
+	Use:   "t [expected] [received]",
 	Short: "t is a command line tool for testing on your terminal",
 	Run: func(cmd *cobra.Command, args []string) {
 
-		actual := ""
+		received := ""
 		expected := ""
 
 		if len(args) > 0 {
@@ -33,31 +35,38 @@ var rootCmd = &cobra.Command{
 		}
 		if !terminal.IsTerminal(int(os.Stdin.Fd())) {
 			stdin, _ := ioutil.ReadAll(os.Stdin)
-			actual = strings.TrimSpace(string(stdin))
+			received = strings.TrimSpace(string(stdin))
 		}
 		if len(args) > 1 {
-			actual = args[1]
+			received = args[1]
 		}
 
 		param := param{
-			operator: "",
-			evalFlag: false,
+			operator:     "",
+			evalFlag:     false,
+			matchFlag:    false,
+			notMatchFlag: false,
 		}
+
 		param.operator, _ = cmd.Flags().GetString("operator")
 		param.evalFlag, _ = cmd.Flags().GetBool("eval")
+		param.matchFlag, _ = cmd.Flags().GetBool("match")
+		param.notMatchFlag, _ = cmd.Flags().GetBool("not-match")
 
 		if param.operator == "" {
 			param.operator = "=="
 		} else {
 			param.evalFlag = true
 		}
-		t(expected, actual, param)
+		t(expected, received, param)
 	},
 }
 
 func init() {
 	rootCmd.Flags().StringP("operator", "o", "", "Operator")
 	rootCmd.Flags().BoolP("eval", "e", false, "Eval value")
+	rootCmd.Flags().BoolP("match", "m", false, "Match regexp")
+	rootCmd.Flags().BoolP("not-match", "", false, "Not match regexp")
 }
 
 func Execute() {
@@ -67,24 +76,37 @@ func Execute() {
 	}
 }
 
-func t(expected string, actual string, param param) {
-	passed := test(expected, actual, param)
+func t(expected string, received string, param param) {
+	passed := test(expected, received, param)
+
+	operator := param.operator
+	if param.matchFlag {
+		operator = "match"
+	} else if param.notMatchFlag {
+		operator = "not match"
+	}
+
 	if passed {
-		pass(expected, param.operator, actual)
+		pass(expected, operator, received)
 	}
-	fail(expected, param.operator, actual)
+	fail(expected, operator, received)
 }
 
-func test(expected string, actual string, param param) bool {
+func test(expected string, received string, param param) bool {
+	if param.matchFlag {
+		return evalRegexp(expected, received)
+	} else if param.notMatchFlag {
+		return !evalRegexp(expected, received)
+	}
+
 	if param.evalFlag {
-		expr := fmt.Sprintf("%s %s %s", expected, param.operator, actual)
-		v := eval(expr)
-		return v.String() == "true"
+		expr := fmt.Sprintf("%s %s %s", expected, param.operator, received)
+		return eval(expr)
 	}
-	return expected == actual
+	return expected == received
 }
 
-func eval(expr string) constant.Value {
+func eval(expr string) bool {
 	fset := token.NewFileSet()
 	tv, err := types.Eval(fset, nil, token.NoPos, expr)
 	if err != nil {
@@ -92,29 +114,35 @@ func eval(expr string) constant.Value {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	return tv.Value
+	return tv.Value.String() == "true"
 }
 
-func pass(expected string, operator string, actual string) {
+func evalRegexp(regex string, input string) bool {
+	r := regexp.MustCompile(regex)
+	return r.MatchString(input)
+}
+
+func pass(expected string, operator string, received string) {
 	check := "\u2713"
 	bgGreen := color.New(color.Bold, color.BgGreen, color.FgHiWhite).SprintFunc()
-	show(bgGreen(fmt.Sprintf("%s PASS ", check)), expected, operator, actual)
+	show(bgGreen(fmt.Sprintf("%s PASS ", check)), expected, operator, received)
 	os.Exit(0)
 }
 
-func fail(expected string, operator string, actual string) {
+func fail(expected string, operator string, received string) {
 	ballot := "\u2717"
 	bgRed := color.New(color.Bold, color.BgRed, color.FgHiWhite).SprintFunc()
-	show(bgRed(fmt.Sprintf("%s FAIL ", ballot)), expected, operator, actual)
+	show(bgRed(fmt.Sprintf("%s FAIL ", ballot)), expected, operator, received)
 	os.Exit(1)
 }
 
-func show(status string, expected string, operator string, actual string) {
-	reset := color.New(color.Reset).SprintfFunc()
+func show(status string, expected string, operator string, received string) {
 	white := color.New(color.Bold, color.FgHiWhite).SprintFunc()
 
+	left := white(fmt.Sprintf("%s", expected))
+	right := white(fmt.Sprintf("%s", received))
+
 	fmt.Printf("%s ", status)
-	fmt.Printf("%s %s ", reset(""), white(expected))
-	fmt.Printf("%s ", white(operator))
-	fmt.Printf("%s %s\n", white(actual), reset(""))
+	fmt.Printf("[%s] ", operator)
+	fmt.Printf("%s %s\n", left, right)
 }
