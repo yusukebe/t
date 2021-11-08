@@ -60,10 +60,11 @@ func Execute() {
 
 func test(expected string, actual string, param param) {
 	if param.operator == "" {
+		message := fmt.Sprintf("%s %s %s", "==", expected, actual)
 		if expected == actual {
-			pass(fmt.Sprintf("%s == %s", expected, actual))
+			pass(message)
 		} else {
-			fail(fmt.Sprintf("%s != %s", expected, actual))
+			fail(message)
 		}
 	}
 
