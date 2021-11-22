@@ -7,7 +7,7 @@
 ## Installation
 
 ```
-$ go get github.com/yusukebe/t/cmd/t
+$ go install github.com/yusukebe/t/cmd/t@latest
 ```
 
 ## Usage
