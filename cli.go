@@ -12,7 +12,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 type param struct {
@@ -33,7 +33,7 @@ var rootCmd = &cobra.Command{
 		if len(args) > 0 {
 			expected = args[0]
 		}
-		if !terminal.IsTerminal(int(os.Stdin.Fd())) {
+		if !term.IsTerminal(int(os.Stdin.Fd())) {
 			stdin, _ := ioutil.ReadAll(os.Stdin)
 			received = strings.TrimSpace(string(stdin))
 		}
