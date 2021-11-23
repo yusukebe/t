@@ -66,15 +66,6 @@ CircleCI, you can test if the http status is ok on CircleCI with **only** config
 
 ```yaml
 version: 2.1
-commands:
-  http_test:
-    parameters:
-      url:
-        type: string
-    steps:
-      - run:
-          name: Test << parameters.url >>
-          command: rj <<parameters.url>> | jq '.code' | t 200
 jobs:
   test:
     parameters:
@@ -87,8 +78,9 @@ jobs:
           command: go install github.com/yusukebe/rj/cmd/rj@latest
       - run:
           command: go install github.com/yusukebe/t/cmd/t@latest
-      - http_test:
-          url: << parameters.url >>
+      - run:
+          name: Test << parameters.url >>
+          command: rj <<parameters.url>> | jq '.code' | t 200
 workflows:
   test_workflow:
     jobs:
