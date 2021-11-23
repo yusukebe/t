@@ -1,0 +1,29 @@
+version: 2.1
+commands:
+  http_test:
+    parameters:
+      url:
+        type: string
+    steps:
+      - run:
+          name: Test << parameters.url >>
+          command: rj <<parameters.url>> | jq '.code' | t 200
+jobs:
+  test:
+    parameters:
+      url:
+        type: string
+    docker:
+      - image: cimg/go:1.17.3
+    steps:
+      - run:
+          command: go install github.com/yusukebe/rj/cmd/rj@latest
+      - run:
+          command: go install github.com/yusukebe/t/cmd/t@latest
+      - http_test:
+          url: << parameters.url >>
+workflows:
+  test_workflow:
+    jobs:
+      - test:
+          url: https://example.com/

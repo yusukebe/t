@@ -46,7 +46,7 @@ Regular expression:
 $ t -m 'hello+' helloooooo # => PASS
 ```
 
-With [jq](https://stedolan.github.io/jq/):
+With [**jq**](https://stedolan.github.io/jq/):
 
 ```
 $ echo '{ "message": "hello" }' | jq -r .message | t hello # => PASS
@@ -56,10 +56,44 @@ $ echo '{ "message": "hello" }' | jq -r .message | t hello # => PASS
 $ echo '{ "number": 5 }' | jq -r .number | t 10 -o '>' # => PASS
 ```
 
-With [rj](https://github.com/yusukebe/rj), test the status is not error:
+With [**rj**](https://github.com/yusukebe/rj), test the status is not error:
 
 ```
 $ rj http://example.com/ | jq -r .code | t 500 -o '>'
+```
+
+CircleCI, you can test if the http status is ok on CircleCI with **only** config.yml:
+
+```yaml
+version: 2.1
+commands:
+  http_test:
+    parameters:
+      url:
+        type: string
+    steps:
+      - run:
+          name: Test << parameters.url >>
+          command: rj <<parameters.url>> | jq '.code' | t 200
+jobs:
+  test:
+    parameters:
+      url:
+        type: string
+    docker:
+      - image: cimg/go:1.17.3
+    steps:
+      - run:
+          command: go install github.com/yusukebe/rj/cmd/rj@latest
+      - run:
+          command: go install github.com/yusukebe/t/cmd/t@latest
+      - http_test:
+          url: << parameters.url >>
+workflows:
+  test_workflow:
+    jobs:
+      - test:
+          url: https://example.com/
 ```
 
 ## Author
