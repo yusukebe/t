@@ -88,6 +88,10 @@ workflows:
           url: https://example.com/
 ```
 
+Example repository:
+
+* <https://github.com/yusukebe/circleci-with-t>
+
 ## Author
 
 Yusuke Wada <https://github.com/yusukebe>
